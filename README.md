@@ -14,6 +14,8 @@
   - MonitoringCOO_crawler.json 파일에 스크레핑을 위한 id 및 pw 저장
   - 스크레핑에 사용할 인증서는 사전 설치
   - db저장주소를 확인하여, db를 참조할 파일들의 주소를 수정한다
+  - 파일명이 1로 시작하는 이미지는, 인식하고자 하는 인증서이미지로 교체
+    - gray : 공동인증서창에서 선택된 상태(글씨만), white : 공동인증서창에서 선택해제된 상태(글씨만)
 
 ## 사용법
 - main 사이트(현황확인 및 실적다운로드, Push알람 및 로그인정보 관리) : cmd 명령어 실행 → streamlit run .\MonitoringCOO\MonitoringCOO.py
@@ -29,8 +31,8 @@
   1) MonitoringCOO_crawler.py 를 실행하여 수동 스크레핑
   2) Scheduler.py 를 실행해두어 주기적으로 스크레핑 수행
   
-## 특이사항
-- 특이사항 (db기준)
+## 참고사항
+- 참고사항 (db기준)
   1) 접수번호가 유일한 값이라 Primary Key로 지정함
   2) 각 컬럼 데이터형
      접수번호 varchar PRIMARY KEY , 
@@ -39,8 +41,9 @@
      접수일시 datetime, 
      처리상태 varchar, 
      Remark varchar
-- 특이사항2 (로그인창에서 멈추는 경우)
+- 참고사항2 (로그인창에서 멈추는 경우)
   1) 로그아웃 해두는 경우 이미지 인식이 되지 않음. Safemode해제시 대응 가능하나 Risk 등을 우려하여 Safemode해제는 하지 않음
+- 참고사항3 : db의 내용은 샘플데이터로 실제 데이터가 아님, 일부 오류가 발생할 수 있음
 
 ## 기능
 - find_window_by_name : selenium이 아닌 윈도우 인식용
