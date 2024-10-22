@@ -5,6 +5,7 @@ import sqlite3
 import json
 from datetime import datetime
 from datetime import timedelta
+from io import BytesIO
 
 import MonitoringCOO_crawler
 
@@ -110,32 +111,38 @@ with tab1:
                 
 
             
-        with col2_col3:    
+        with col2_col3: 
             report_criteria = f'{year_to_update_report}-{int(month_to_update_report):02d}'
             report_save_to = st.text_input(label="저장경로", value=f'{file_path_down}\COO_실적_{report_criteria}.xlsx', help='저장할 경로 입력')
 
-            if st.button('월 발급완료건 다운로드(NEGO1,2)',):
-                read_db_to_dataframe(file_path_db + 'Korcham_status.db', f'''
-                                    SELECT *
-                                    FROM (
-                                        SELECT * FROM 상공_SEC_NEGO1
-                                        WHERE 
-                                        접수일시 LIKE '{report_criteria}%' 
-                                        AND (처리상태 LIKE '%발급완료 (Accept)\n[ 신규 ]%'
-                                            OR 처리상태 LIKE '%발급완료 (Accept)\n[ 정정 ]%')
-                                        AND 증명서종류 = '일반(비특혜/Non-preferential) 원산지증명서'
-                                        UNION ALL
-                                        SELECT * FROM 상공_SEC_NEGO2
-                                        WHERE 
-                                        접수일시 LIKE '{report_criteria}%' 
-                                        AND (처리상태 LIKE '%발급완료 (Accept)\n[ 신규 ]%'
-                                            OR 처리상태 LIKE '%발급완료 (Accept)\n[ 정정 ]%')
-                                        AND 증명서종류 = '일반(비특혜/Non-preferential) 원산지증명서'
-                                    ) AS CombinedResults;''').drop_duplicates('대표Invoice').to_excel(report_save_to)
+            
+
             
         with col2_col4:
-            if st.button('전체다운로드(정상)',):
-                read_db_to_dataframe(file_path_db + 'Korcham_status.db', f'''
+            # 실적 다운로드
+            ## 유형 선택에 따라 SQL문 실행
+            radio_report_type = st.radio('저장할 보고서유형',['월 실적', '전체 실적(정상)', '전체 실적(오류)'])
+            if radio_report_type == '월 실적':
+                df_for_down = read_db_to_dataframe(file_path_db + 'Korcham_status.db', f'''
+                                    SELECT *
+                                    FROM (
+                                        SELECT * FROM 상공_SEC_NEGO1
+                                        WHERE 
+                                        접수일시 LIKE '{report_criteria}%' 
+                                        AND (처리상태 LIKE '%발급완료 (Accept)\n[ 신규 ]%'
+                                            OR 처리상태 LIKE '%발급완료 (Accept)\n[ 정정 ]%')
+                                        AND 증명서종류 = '일반(비특혜/Non-preferential) 원산지증명서'
+                                        UNION ALL
+                                        SELECT * FROM 상공_SEC_NEGO2
+                                        WHERE 
+                                        접수일시 LIKE '{report_criteria}%' 
+                                        AND (처리상태 LIKE '%발급완료 (Accept)\n[ 신규 ]%'
+                                            OR 처리상태 LIKE '%발급완료 (Accept)\n[ 정정 ]%')
+                                        AND 증명서종류 = '일반(비특혜/Non-preferential) 원산지증명서'
+                                    ) AS CombinedResults;''').drop_duplicates('대표Invoice')#.to_excel(report_save_to)
+                report_path_final = report_save_to
+            elif radio_report_type == '전체 실적(정상)':
+                df_for_down = read_db_to_dataframe(file_path_db + 'Korcham_status.db', f'''
                                     SELECT *
                                     FROM (
                                         SELECT * FROM 상공_SEC_NEGO1
@@ -149,9 +156,10 @@ with tab1:
                                         (처리상태 LIKE '%발급완료 (Accept)\n[ 신규 ]%'
                                             OR 처리상태 LIKE '%발급완료 (Accept)\n[ 정정 ]%')
                                         AND 증명서종류 = '일반(비특혜/Non-preferential) 원산지증명서'
-                                    ) AS CombinedResults;''').drop_duplicates('대표Invoice').to_excel(report_save_to.replace(f'_{report_criteria}.xlsx','(all).xlsx'))
-            if st.button('전체다운로드(오류통보)',):
-                read_db_to_dataframe(file_path_db + 'Korcham_status.db', f'''
+                                    ) AS CombinedResults;''').drop_duplicates('대표Invoice')#.to_excel(report_save_to.replace(f'_{report_criteria}.xlsx','(all).xlsx'))
+                report_path_final = report_save_to.replace(f'_{report_criteria}.xlsx','(all).xlsx')
+            elif radio_report_type == '전체 실적(오류)':
+                df_for_down = read_db_to_dataframe(file_path_db + 'Korcham_status.db', f'''
                                     SELECT *
                                     FROM (
                                         SELECT * FROM 상공_SEC_NEGO1
@@ -163,8 +171,21 @@ with tab1:
                                         WHERE 
                                             처리상태 LIKE '%오류통보%'
                                         AND 증명서종류 = '일반(비특혜/Non-preferential) 원산지증명서'
-                                    ) AS CombinedResults;''').drop_duplicates('대표Invoice').to_excel(report_save_to.replace(f'_{report_criteria}.xlsx','(error).xlsx'))
-                
+                                    ) AS CombinedResults;''').drop_duplicates('대표Invoice')#.to_excel(report_save_to.replace(f'_{report_criteria}.xlsx','(error).xlsx'))
+                report_path_final = report_save_to.replace(f'_{report_criteria}.xlsx','(error).xlsx')
+            
+            ## 엑셀로 저장할 바이너리 객체 생성
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                df_for_down.to_excel(writer, index=False)
+            excel_data = output.getvalue()
+          
+            ## 다운로드 버튼
+            st.download_button(
+            label="엑셀 파일 다운로드",
+            data=excel_data,
+            file_name=report_path_final,
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             
             
 
