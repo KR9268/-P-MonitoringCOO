@@ -10,8 +10,8 @@ import MonitoringCOO_crawler
 
 
 # 기준정보
-file_path_db = r'\\파일 공유\MoniteringCOO' + '\\'
-file_path_pickle = r'\\파일 공유\MoniteringCOO' + '\\dict_for_push.json'
+file_path_db = r'\\23.20.135.83\파일 공유\MoniteringCOO' + '\\'
+file_path_pickle = r'\\23.20.135.83\파일 공유\MoniteringCOO' + '\\dict_for_push.json'
 file_path_down = 'C:\\python_source\\'
 
 with open(file_path_db + 'MonitoringCOO_crawler.json', 'r', encoding='utf-8')as f:
@@ -98,17 +98,22 @@ with tab1:
             search_df = search_df[search_df['대표Invoice'].str.contains(user_text_input)]
         st.dataframe(search_df, width=1500, hide_index=True)
 
-        col2_col1, col2_col2, col2_col3, col2_col4 = st.columns([5,0.5,0.5,2])
+        col2_col1, col2_col2, col2_col3, col2_col4 = st.columns([2, 1, 4 ,2])
         with col2_col1:
             with st.container():
                 st.text(f"마지막 업데이트 : \n SEC_NEGO1 : {korcham_opt['last_update']['SEC_NEGO1']}\n SEC_NEGO2 : {korcham_opt['last_update']['SEC_NEGO2']}\n SMC_NEGO1 : {korcham_opt['last_update']['SMC_NEGO1']}")
         with col2_col2:
             year_to_update_report = st.text_input(label="연(YYYY) ", value=str((datetime.today()-timedelta(30)).year), max_chars=4, help='4자리 숫자만 입력 가능')
-        with col2_col3:    
             month_to_update_report = st.text_input(label="월(MM) ", value=str((datetime.today()-timedelta(30)).month), max_chars=2, help='2자리 숫자만 입력 가능')
-        with col2_col4:
+
+            
+                
+
+            
+        with col2_col3:    
             report_criteria = f'{year_to_update_report}-{int(month_to_update_report):02d}'
-            report_save_to = st.text_input(label="저장경로", value=f'{file_path_down}\COO_실적_{report_criteria}.xlsx', help='4자리 숫자만 입력 가능')
+            report_save_to = st.text_input(label="저장경로", value=f'{file_path_down}\COO_실적_{report_criteria}.xlsx', help='저장할 경로 입력')
+
             if st.button('월 발급완료건 다운로드(NEGO1,2)',):
                 read_db_to_dataframe(file_path_db + 'Korcham_status.db', f'''
                                     SELECT *
@@ -127,6 +132,41 @@ with tab1:
                                             OR 처리상태 LIKE '%발급완료 (Accept)\n[ 정정 ]%')
                                         AND 증명서종류 = '일반(비특혜/Non-preferential) 원산지증명서'
                                     ) AS CombinedResults;''').drop_duplicates('대표Invoice').to_excel(report_save_to)
+            
+        with col2_col4:
+            if st.button('전체다운로드(정상)',):
+                read_db_to_dataframe(file_path_db + 'Korcham_status.db', f'''
+                                    SELECT *
+                                    FROM (
+                                        SELECT * FROM 상공_SEC_NEGO1
+                                        WHERE 
+                                        (처리상태 LIKE '%발급완료 (Accept)\n[ 신규 ]%'
+                                            OR 처리상태 LIKE '%발급완료 (Accept)\n[ 정정 ]%')
+                                        AND 증명서종류 = '일반(비특혜/Non-preferential) 원산지증명서'
+                                        UNION ALL
+                                        SELECT * FROM 상공_SEC_NEGO2
+                                        WHERE 
+                                        (처리상태 LIKE '%발급완료 (Accept)\n[ 신규 ]%'
+                                            OR 처리상태 LIKE '%발급완료 (Accept)\n[ 정정 ]%')
+                                        AND 증명서종류 = '일반(비특혜/Non-preferential) 원산지증명서'
+                                    ) AS CombinedResults;''').drop_duplicates('대표Invoice').to_excel(report_save_to.replace(f'_{report_criteria}.xlsx','(all).xlsx'))
+            if st.button('전체다운로드(오류통보)',):
+                read_db_to_dataframe(file_path_db + 'Korcham_status.db', f'''
+                                    SELECT *
+                                    FROM (
+                                        SELECT * FROM 상공_SEC_NEGO1
+                                        WHERE 
+                                            처리상태 LIKE '%오류통보%'
+                                        AND 증명서종류 = '일반(비특혜/Non-preferential) 원산지증명서'
+                                        UNION ALL
+                                        SELECT * FROM 상공_SEC_NEGO2
+                                        WHERE 
+                                            처리상태 LIKE '%오류통보%'
+                                        AND 증명서종류 = '일반(비특혜/Non-preferential) 원산지증명서'
+                                    ) AS CombinedResults;''').drop_duplicates('대표Invoice').to_excel(report_save_to.replace(f'_{report_criteria}.xlsx','(error).xlsx'))
+                
+            
+            
 
 
 
@@ -159,3 +199,4 @@ with tab3:
 
 # streamlit run MonitoringCOO.py
 # streamlit run .\MonitoringCOO\MonitoringCOO.py
+# streamlit run ..\MonitoringCOO\MonitoringCOO.py
